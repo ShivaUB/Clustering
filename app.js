@@ -1,7 +1,9 @@
 var canvasWrapper = document.getElementById('canvasWrapper');
-var two = new Two({ width: 1540, height: 500 }).appendTo(canvasWrapper);
+var two = new Two({ width: 1330, height: 500 }).appendTo(canvasWrapper);
 var startClustering = document.getElementById('startClustering');
+var randomInputs = document.getElementById('randomInputs');
 var points = [];
+var numberOfClusters;
 
 canvasWrapper.addEventListener('click',(event) => {
     if(checkIfPointExists(event.offsetX,event.offsetY)==false){
@@ -18,15 +20,15 @@ startClustering.addEventListener('click',() => {
 
 function drawCircle(xPosition, yPosition){
     let circle = two.makeCircle(xPosition, yPosition, 5);
-    circle.fill = '#000000';
+    circle.fill = '#595959';
     circle.stroke = 'black';
     two.update();
 }
 
 function drawFlickeringStar(xPosition, yPosition){
     let star = two.makeStar(xPosition, yPosition,5);
-    star.fill = '#000000';
-    star.stroke = 'black';
+    star.fill = '#eb4034';
+    star.stroke = 'red';
     setInterval(() => {
         star.opacity=0;
         two.update();
@@ -47,18 +49,20 @@ class Point{
     }
 
     assignCentroidBelongsTo(arrOfCentroids){
-        this.oldCentroidbelongsTo = this.centroidBelongsTo;
-        let minimunDist=Infinity;
-        let dist;
-        arrOfCentroids.forEach(centroid => {
-            dist = calculateManhattanDistance(this.xCordinate,this.yCordinate,centroid.xCordinate,centroid.yCordinate);
-            if(dist<minimunDist){
-                minimunDist = dist;
-                this.centroidBelongsTo = centroid;
-                this.cost = minimunDist;
-            }
-        });
-        drawLineBetweenTwoPoints(this.xCordinate,this.yCordinate,this.centroidBelongsTo.xCordinate,this.centroidBelongsTo.yCordinate);
+            this.oldCentroidbelongsTo = this.centroidBelongsTo;
+            let minimunDist=Infinity;
+            let dist;
+            arrOfCentroids.forEach(centroid => {
+                dist = calculateManhattanDistance(this.xCordinate,this.yCordinate,centroid.xCordinate,centroid.yCordinate);
+                if(dist<minimunDist){
+                    minimunDist = dist;
+                    this.centroidBelongsTo = centroid;
+                    this.cost = minimunDist;
+                }
+            });
+            setTimeout(() => {
+                drawLineBetweenTwoPoints(this.xCordinate,this.yCordinate,this.centroidBelongsTo.xCordinate,this.centroidBelongsTo.yCordinate);
+            }, 200);
     }
 }
 
@@ -69,6 +73,7 @@ function checkIfPointExists(x,y){
 }
 
 function startClusteringProcess(){
+    numberOfClusters = document.getElementById('numberOfClusters');
     let kCentroids = getKCentroids();
     do{
         points.forEach(sPoint => {
@@ -76,6 +81,9 @@ function startClusteringProcess(){
         });
         kCentroids = calculateNewCentroid(kCentroids);
     } while(checkIfNewDataPointsAddedToAnyCentroids()==true);
+    points.forEach(sPoint => {
+        sPoint.assignCentroidBelongsTo(kCentroids);
+    });
     startClustering.style.backgroundColor = "black";
 }
 
@@ -95,8 +103,8 @@ function calculateManhattanDistance(x1,y1,x2,y2){
 
 function getKCentroids(){
     let arr = [];
-    for(let i=0;i<2;i++){
-        arr.push(new Point(Math.floor(Math.random()*1540),Math.floor(Math.random()*500),null));
+    for(let i=0;i<numberOfClusters.value;i++){
+        arr.push(new Point(Math.floor(Math.random()*1311 + 10),Math.floor(Math.random()*481 + 10),null));
         drawFlickeringStar(arr[arr.length-1].xCordinate,arr[arr.length-1].yCordinate);
     }
     return arr;
@@ -134,3 +142,13 @@ function drawLineBetweenTwoPoints(x1,y1,x2,y2){
     const line = two.makeLine(x1,y1,x2,y2);
     two.update();
 }
+
+
+randomInputs.addEventListener('click', () => {
+    two.clear();
+    two.update();
+    for(let i=0;i<1000;i++){
+        points.push(new Point(Math.floor(Math.random()*1311) + 10,Math.floor(Math.random()*481)+10 ,null));
+        drawCircle(points[points.length-1].xCordinate,points[points.length-1].yCordinate);;
+    }
+});
