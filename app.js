@@ -1,21 +1,26 @@
 var canvasWrapper = document.getElementById('canvasWrapper');
 var two = new Two({ width: 1330, height: 500 }).appendTo(canvasWrapper);
-var startClustering = document.getElementById('startClustering');
+var startKMeansClustering = document.getElementById('startKMeansClustering');
 var randomInputs = document.getElementById('randomInputs');
 var points = [];
-var numberOfClusters;
+var numberOfClustersElement = document.getElementById('numberOfClusters');
+var numberOfClusters = 3;
+
+numberOfClustersElement.addEventListener('input', (event) => {
+    numberOfClusters = event.srcElement.value;
+})
 
 canvasWrapper.addEventListener('click',(event) => {
-    if(checkIfPointExists(event.offsetX,event.offsetY)==false){
-        points.push(new Point(event.offsetX,event.offsetY,null));
+    if(checkIfPointExists(points,event.offsetX,event.offsetY)==false){
+        points.push(new Point(event.offsetX,event.offsetY));
         drawCircle(event.offsetX,event.offsetY);
     }
 });
 
-startClustering.addEventListener('click',() => {
+startKMeansClustering.addEventListener('click',() => {
     canvasWrapper.style.pointerEvents = "none";
     console.log(points);
-    startClusteringProcess();
+    startKMeansClusteringProcess();
 });
 
 function drawCircle(xPosition, yPosition){
@@ -39,52 +44,29 @@ function drawFlickeringStar(xPosition, yPosition){
     }, 100);
 }
 
-class Point{
-    constructor(xCordinate,yCordinate,centroidBelongsTo){
-        this.xCordinate=xCordinate;
-        this.yCordinate=yCordinate;
-        this.oldCentroidbelongsTo = null;
-        this.centroidBelongsTo = centroidBelongsTo;
-        this.cost = null;
-    }
-
-    assignCentroidBelongsTo(arrOfCentroids){
-            this.oldCentroidbelongsTo = this.centroidBelongsTo;
-            let minimunDist=Infinity;
-            let dist;
-            arrOfCentroids.forEach(centroid => {
-                dist = calculateManhattanDistance(this.xCordinate,this.yCordinate,centroid.xCordinate,centroid.yCordinate);
-                if(dist<minimunDist){
-                    minimunDist = dist;
-                    this.centroidBelongsTo = centroid;
-                    this.cost = minimunDist;
-                }
-            });
-            setTimeout(() => {
-                drawLineBetweenTwoPoints(this.xCordinate,this.yCordinate,this.centroidBelongsTo.xCordinate,this.centroidBelongsTo.yCordinate);
-            }, 200);
-    }
-}
-
-function checkIfPointExists(x,y){
-    return points.some((er)=>{
+function checkIfPointExists(arr,x,y){
+    return arr.some((er)=>{
         return (er.xCordinate === x && er.yCordinate === y);
     })
 }
 
-function startClusteringProcess(){
-    numberOfClusters = document.getElementById('numberOfClusters');
+function startKMeansClusteringProcess(){
     let kCentroids = getKCentroids();
     do{
-        points.forEach(sPoint => {
-            sPoint.assignCentroidBelongsTo(kCentroids);
-        });
-        kCentroids = calculateNewCentroid(kCentroids);
+        setTimeout(() => {
+            points.forEach(sPoint => {
+                sPoint.assignCentroidBelongsTo(kCentroids);
+            });
+            drawKMeansClusters(kCentroids);
+            kCentroids = calculateNewCentroid(kCentroids);
+        }, 200);
     } while(checkIfNewDataPointsAddedToAnyCentroids()==true);
     points.forEach(sPoint => {
         sPoint.assignCentroidBelongsTo(kCentroids);
     });
-    startClustering.style.backgroundColor = "black";
+    drawKMeansClusters(kCentroids);
+    startKMeansClustering.style.backgroundColor = "black";
+    startKMeansClustering.style.color = "lime";
 }
 
 function getAveragePoint(arr){
@@ -94,7 +76,7 @@ function getAveragePoint(arr){
         xSum += ele.xCordinate;
         ySum += ele.yCordinate;
     });
-    return new Point((xSum/arr.length) ,(ySum/arr.length), null);
+    return new Point((xSum/arr.length) ,(ySum/arr.length));
 }
 
 function calculateManhattanDistance(x1,y1,x2,y2){
@@ -103,26 +85,21 @@ function calculateManhattanDistance(x1,y1,x2,y2){
 
 function getKCentroids(){
     let arr = [];
-    for(let i=0;i<numberOfClusters.value;i++){
-        arr.push(new Point(Math.floor(Math.random()*1311 + 10),Math.floor(Math.random()*481 + 10),null));
-        drawFlickeringStar(arr[arr.length-1].xCordinate,arr[arr.length-1].yCordinate);
+    for(let i=0;i<numberOfClusters;i++){
+        arr.push(new Point(Math.floor(Math.random()*1311 + 10),Math.floor(Math.random()*481 + 10)));
     }
     return arr;
 }
 
 function calculateNewCentroid(kCent){
-    two.clear();
-    points.forEach(sp => {
-        drawCircle(sp.xCordinate,sp.yCordinate);
-    });
+    
     let dataPointsBelongedToCentroid;
     let retArr=[];
     kCent.forEach(sCentroid => {
         dataPointsBelongedToCentroid = points.filter((point) =>{
-            return (sCentroid.xCordinate === point.centroidBelongsTo.xCordinate && sCentroid.yCordinate === point.centroidBelongsTo.yCordinate);
+            return (sCentroid.xCordinate === point.centroidBelongsToXCordinate && sCentroid.yCordinate === point.centroidBelongsToYCordinate);
         })
         retArr.push(getAveragePoint(dataPointsBelongedToCentroid));
-        drawFlickeringStar(retArr[retArr.length-1].xCordinate,retArr[retArr.length-1].yCordinate)
     });
     return retArr;
 }
@@ -130,7 +107,7 @@ function calculateNewCentroid(kCent){
 function checkIfNewDataPointsAddedToAnyCentroids(){
     let ret = false;
     for(let i=0; i<points.length; i++){
-        if( points[i].oldCentroidbelongsTo!=null && ((points[i].centroidBelongsTo.xCordinate != points[i].oldCentroidbelongsTo.xCordinate) || (points[i].centroidBelongsTo.yCordinate != points[i].oldCentroidbelongsTo.yCordinate)) ){
+        if( (points[i].centroidBelongsToXCordinate != points[i].oldCentroidbelongsToYCordinate) || (points[i].centroidBelongsToYCordinate != points[i].oldCentroidbelongsToYCordinate) ){
             ret = true;
             break;
         }
@@ -147,8 +124,119 @@ function drawLineBetweenTwoPoints(x1,y1,x2,y2){
 randomInputs.addEventListener('click', () => {
     two.clear();
     two.update();
+    points=[];
     for(let i=0;i<1000;i++){
-        points.push(new Point(Math.floor(Math.random()*1311) + 10,Math.floor(Math.random()*481)+10 ,null));
+        points.push(new Point(Math.floor(Math.random()*1311) + 10,Math.floor(Math.random()*481)+10));
         drawCircle(points[points.length-1].xCordinate,points[points.length-1].yCordinate);;
     }
 });
+
+function drawKMeansClusters(centroids){
+    setTimeout(() => {
+        two.clear();
+        centroids.forEach(centroid => {
+            drawFlickeringStar(centroid.xCordinate,centroid.yCordinate);
+        });
+        points.forEach(sp => {
+            drawCircle(sp.xCordinate,sp.yCordinate);
+            drawLineBetweenTwoPoints(sp.xCordinate,sp.yCordinate,sp.centroidBelongsToXCordinate,sp.centroidBelongsToYCordinate);
+        });
+    }, 200);
+}
+
+class Point{
+    constructor(xCordinate,yCordinate){
+        this.xCordinate=xCordinate;
+        this.yCordinate=yCordinate;
+        this.oldCentroidbelongsToXCordinate = null;
+        this.oldCentroidbelongsToYCordinate = null;
+        this.centroidBelongsToXCordinate = null;
+        this.centroidBelongsToYCordinate = null;
+        this.cost = null;
+    }
+
+    assignCentroidBelongsTo(arrOfCentroids){
+        this.oldCentroidbelongsToXCordinate = this.centroidBelongsToXCordinate;
+        this.oldCentroidbelongsToYCordinate = this.centroidBelongsToYCordinate;
+        let minimunDist=Infinity;
+        let dist;
+        arrOfCentroids.forEach(centroid => {
+            dist = calculateManhattanDistance(this.xCordinate,this.yCordinate,centroid.xCordinate,centroid.yCordinate);
+            if(dist<minimunDist){
+                minimunDist = dist;
+                this.centroidBelongsToXCordinate = centroid.xCordinate;
+                this.centroidBelongsToYCordinate = centroid.yCordinate;
+                this.cost = minimunDist;
+            }
+        });
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------------
+
+var startKMedoidsClustering = document.getElementById('startKMedoidsClustering');
+var bestCost = Infinity;
+var randomMedoids;
+
+startKMedoidsClustering.addEventListener('click', ()=>{
+    randomMedoids = points.slice(0,numberOfClusters);
+    let currentMedoidsCost = 0;
+    console.log(randomMedoids);
+    points.forEach(sPoint => {
+        sPoint.assignCentroidBelongsTo(randomMedoids);
+        currentMedoidsCost += sPoint.cost;
+    });
+    if(currentMedoidsCost<bestCost){
+        bestCost = currentMedoidsCost;
+        drawBestClusters(randomMedoids);
+    }
+    _.range(1000).forEach(i => {
+        setTimeout(() => {
+            randomMedoids = getNewMedoids(randomMedoids.slice());
+            if(i==999){        
+                startKMedoidsClustering.style.backgroundColor = 'black';
+                startKMedoidsClustering.style.color = "lime";
+            }
+        }, 10);
+    })
+});
+
+
+function getNewMedoids(medoids){
+    let retMedoids = medoids.slice();
+    let currentMedoidsCost = 0;
+    let newMedoid = points[Math.floor(Math.random()*points.length)];
+    while(checkIfPointExists(medoids,newMedoid.xCordinate,newMedoid.yCordinate) == true){
+        newMedoid = points[Math.floor(Math.random()*points.length)];
+    }
+    medoids[Math.floor(Math.random()*medoids.length)] = newMedoid;
+    points.forEach(sPoint => {
+        sPoint.assignCentroidBelongsTo(medoids);
+        currentMedoidsCost += sPoint.cost;
+    });
+    if(currentMedoidsCost<bestCost){
+        bestCost = currentMedoidsCost;
+        retMedoids = medoids;
+        points.forEach(sPoint => {
+            sPoint.assignCentroidBelongsTo(medoids);
+        });
+        drawBestClusters(retMedoids);
+    }
+    return retMedoids;
+}
+ 
+function drawBestClusters(bestMedoids){
+    two.clear();
+    points.forEach(sp => {
+        drawCircle(sp.xCordinate,sp.yCordinate);
+    });
+    bestMedoids.forEach(med => {
+        drawFlickeringStar(med.xCordinate,med.yCordinate);
+        points.forEach(sPoint => {
+            if(sPoint.centroidBelongsToXCordinate == med.xCordinate && sPoint.centroidBelongsToYCordinate == med.yCordinate){
+                drawLineBetweenTwoPoints(sPoint.xCordinate,sPoint.yCordinate,med.xCordinate,med.yCordinate);
+            }
+        })
+    })
+    two.update();
+}

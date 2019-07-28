@@ -12,10 +12,10 @@
     margin:10px;
 }
 
-#startClustering{
+#startKMeansClustering, #startKMedoidsClustering{
     margin-top:10px;
-    color:lime;
-    background-color: grey;
+    color:rgb(6, 126, 6);
+    background-color: rgb(218, 212, 212);
     padding:10px;
     height:65px;
     width:160px;
